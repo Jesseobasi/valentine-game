@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cook the Dish</title>
+
+<style>
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #0f172a, #020617);
+    color: white;
+    height: 100vh;
+    overflow: hidden;
+    text-align: center;
+  }
+
+  .screen {
+    display: none;
+    height: 100%;
+    padding: 20px;
+  }
+
+  .active {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 1.2s;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  h1 { font-size: 2.2rem; }
+  p { font-size: 1.05rem; }
+
+  button {
+    padding: 14px 30px;
+    font-size: 1.1rem;
+    border-radius: 30px;
+    border: none;
+    cursor: pointer;
+    margin-top: 20px;
+  }
+
+  .primary { background: #22c55e; color: white; }
+  .yes { background: #ec4899; color: white; }
+  .no {
+    background: #6b7280;
+    color: white;
+    position: absolute;
+  }
+
+  #gameArea {
+    position: relative;
+    width: 100%;
+    height: 70vh;
+  }
+
+  .ingredient {
+    position: absolute;
+    font-size: 2.3rem;
+    cursor: pointer;
+    animation: fall 4s linear forwards;
+  }
+
+  @keyframes fall {
+    from { top: -40px; }
+    to { top: 100%; }
+  }
+
+  .counter { font-size: 1.4rem; }
+
+  /* DARK RECIPE CARD */
+  .recipe-card {
+    background: linear-gradient(145deg, #0f172a, #020617);
+    color: #e5e7eb;
+    border-radius: 20px;
+    padding: 22px;
+    width: 92%;
+    max-width: 380px;
+    box-shadow:
+      0 20px 40px rgba(0,0,0,0.6),
+      inset 0 0 0 1px rgba(255,255,255,0.05);
+    animation: fadeIn 1.5s;
+  }
+
+  .recipe-card img {
+    width: 100%;
+    border-radius: 14px;
+    margin-bottom: 14px;
+    object-fit: cover;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+  }
+
+  .recipe-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #f9fafb;
+  }
+
+  .recipe-section {
+    text-align: left;
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  .recipe-section strong {
+    color: #f472b6;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .recipe-section ul {
+    padding-left: 18px;
+    margin: 0;
+  }
+
+  .recipe-section li {
+    margin-bottom: 4px;
+  }
+
+  .lock-code {
+    font-size: 2rem;
+    letter-spacing: 10px;
+    text-align: center;
+    margin-top: 8px;
+    font-weight: bold;
+    color: #22c55e;
+    background: rgba(34,197,94,0.08);
+    padding: 10px 0;
+    border-radius: 12px;
+  }
+
+  /* CONFETTI */
+  .confetti {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: white;
+    animation: confettiFall 3s linear forwards;
+  }
+
+  @keyframes confettiFall {
+    from { transform: translateY(0); }
+    to { transform: translateY(100vh); opacity: 0; }
+  }
+</style>
+</head>
+
+<body>
+
+<audio id="music" src="music.mp3" loop></audio>
+
+<!-- INTRO -->
+<div id="intro" class="screen active">
+  <h1>Hey Annelle 🙂</h1>
+  <p>I made a small cooking game for you.<br>Finish the dish to unlock the box.</p>
+  <button class="primary" onclick="startGame()">Start Cooking 🍳</button>
+</div>
+
+<!-- GAME -->
+<div id="game" class="screen">
+  <div class="counter">Ingredients added: <span id="count">0</span>/5</div>
+  <div id="gameArea"></div>
+</div>
+
+<!-- TRANSITION -->
+<div id="transition" class="screen">
+  <h1>Dish complete 👩🏽‍🍳✨</h1>
+  <p>One last thing…</p>
+</div>
+
+<!-- QUESTION -->
+<div id="question" class="screen">
+  <h1>Will you be my Valentine, Annelle? 💖</h1>
+  <button class="yes" onclick="sayYes()">Yes 💘</button>
+  <button class="no" id="noBtn">No 😳</button>
+</div>
+
+<!-- RECIPE CARD / UNLOCK -->
+<div id="unlock" class="screen">
+  <div class="recipe-card">
+    <img src="us.jpg" alt="Us together">
+    <div class="recipe-title">Recipe for Us 💕</div>
+
+    <div class="recipe-section">
+      <strong>Ingredients</strong>
+      <ul>
+        <li>Plenty of laughs</li>
+        <li>Late-night talks</li>
+        <li>Patience & care</li>
+        <li>Good food 🍝</li>
+        <li>You & Me</li>
+      </ul>
+    </div>
+
+    <div class="recipe-section">
+      <strong>Instructions</strong>
+      Take things one day at a time.<br>
+      Add honesty, kindness, and effort.<br>
+      Enjoy every moment together 💖
+    </div>
+
+    <div class="recipe-section">
+      <strong>Box Code</strong>
+      <div class="lock-code" id="lockCode"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const LOCK_CODE = "214"; // CHANGE THIS
+  let collected = 0;
+  const music = document.getElementById("music");
+  const ingredients = ["🍅","🧀","🥬","🍞","🍗","🧄"];
+
+  function show(id) {
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+  }
+
+  function startGame() {
+    show("game");
+    spawnIngredients();
+  }
+
+  function spawnIngredients() {
+    const area = document.getElementById("gameArea");
+    const interval = setInterval(() => {
+      if (collected >= 5) {
+        clearInterval(interval);
+        setTimeout(showTransition, 800);
+        return;
+      }
+
+      const item = document.createElement("div");
+      item.className = "ingredient";
+      item.innerHTML = ingredients[Math.floor(Math.random() * ingredients.length)];
+      item.style.left = Math.random() * 90 + "%";
+
+      item.onclick = () => {
+        collected++;
+        document.getElementById("count").textContent = collected;
+        item.remove();
+      };
+
+      area.appendChild(item);
+      setTimeout(() => item.remove(), 4000);
+    }, 850);
+  }
+
+  function showTransition() {
+    show("transition");
+    setTimeout(() => {
+      show("question");
+      music.volume = 0.3;
+      music.play();
+    }, 1800);
+  }
+
+  function sayYes() {
+    show("unlock");
+    document.getElementById("lockCode").textContent = LOCK_CODE;
+    launchConfetti();
+  }
+
+  function launchConfetti() {
+    for (let i = 0; i < 80; i++) {
+      const c = document.createElement("div");
+      c.className = "confetti";
+      c.style.left = Math.random() * 100 + "%";
+      c.style.background = `hsl(${Math.random()*360},100%,70%)`;
+      c.style.animationDuration = 2 + Math.random()*2 + "s";
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+
+  // Dodge No button
+  const noBtn = document.getElementById("noBtn");
+  noBtn.addEventListener("mouseover", () => {
+    noBtn.style.left = Math.random() * 70 + "%";
+    noBtn.style.top = Math.random() * 70 + "%";
+  });
+</script>
+
+</body>
+</html>
